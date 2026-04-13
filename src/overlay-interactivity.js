@@ -19,7 +19,8 @@
     return Boolean(
       context.isHoveringControls ||
       context.isSettingsOpen ||
-      context.isRecording
+      context.isRecording ||
+      context.isDraggingStatusBar
     );
   }
 

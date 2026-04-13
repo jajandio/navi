@@ -34,6 +34,19 @@ test('keeps overlay interactive while recording audio', () => {
       isHoveringControls: false,
       isSettingsOpen: false,
       isRecording: true,
+      isDraggingStatusBar: false,
+    }),
+    true
+  );
+});
+
+test('keeps overlay interactive while dragging the status bar', () => {
+  assert.equal(
+    shouldEnableOverlayInteractivity({
+      isHoveringControls: false,
+      isSettingsOpen: false,
+      isRecording: false,
+      isDraggingStatusBar: true,
     }),
     true
   );
@@ -45,6 +58,7 @@ test('disables overlay interactivity when no clickable area is active', () => {
       isHoveringControls: false,
       isSettingsOpen: false,
       isRecording: false,
+      isDraggingStatusBar: false,
     }),
     false
   );

@@ -14,7 +14,14 @@ function configPath() {
   return path.join(app.getPath('userData'), 'navi-config.json');
 }
 function defaultConfig() {
-  return { tts: 'local', language: 'auto', elevenLabsKey: '', elevenLabsVoiceId: 'fS4RM86GDhM251CjumZM' };
+  return {
+    tts: 'local',
+    language: 'auto',
+    elevenLabsKey: '',
+    elevenLabsVoiceId: 'fS4RM86GDhM251CjumZM',
+    statusBarPosition: null,
+    statusBarVisible: true,
+  };
 }
 function loadConfig() {
   try { return { ...defaultConfig(), ...JSON.parse(fs.readFileSync(configPath(), 'utf8')) }; }
@@ -176,6 +183,9 @@ function registerHotkeys() {
   });
   globalShortcut.register('CommandOrControl+N', () => {
     overlayWin.webContents.send('hotkey-settings');
+  });
+  globalShortcut.register('CommandOrControl+H', () => {
+    overlayWin.webContents.send('hotkey-toggle-status-bar');
   });
   globalShortcut.register('CommandOrControl+Q', () => {
     app.quit();
