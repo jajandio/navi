@@ -136,6 +136,8 @@
     pointer-events: all;
     cursor: default;
   }
+  #status-bar.hidden { display: none; }
+  #status-bar.dragging { cursor: grabbing; }
 
   #status-dot {
     width: 8px; height: 8px; border-radius: 50%;
@@ -346,6 +348,8 @@ let by = window.innerHeight - 120;
 let targetBx = bx, targetBy = by;
 let isFollowingMouse = true;
 let isHoveringControls = false;
+let isDraggingStatusBar = false;
+let statusBarDragOffset = { x: 0, y: 0 };
 
 // ─────────────────────────────────────────────────────────────────────────
 // DOM refs
@@ -399,7 +403,7 @@ function setState(s) {
       buddyFace.textContent = '✦';
       statusDot.className = '';
       statusText.textContent = whisperReady
-        ? 'Ctrl+F speak · Ctrl+N settings · Ctrl+Q quit'
+        ? 'Ctrl+F speak · Ctrl+N settings · Ctrl+H hide · Ctrl+Q quit'
         : 'loading whisper…';
       isFollowingMouse = true;
       clearTimeout(autoDismissTimer);
@@ -624,8 +628,53 @@ function syncOverlayInteractivity() {
       isHoveringControls,
       isSettingsOpen: settingsPanel.classList.contains('show'),
       isRecording,
+      isDraggingStatusBar,
     })
   );
+}
+
+function clampStatusBarPosition(position) {
+  const rect = statusBar.getBoundingClientRect();
+  const halfW = rect.width / 2;
+  const halfH = rect.height / 2;
+  const margin = 8;
+
+  return {
+    x: Math.min(Math.max(position.x, halfW + margin), window.innerWidth - halfW - margin),
+    y: Math.min(Math.max(position.y, halfH + margin), window.innerHeight - halfH - margin),
+  };
+}
+
+function applyStatusBarPosition(position) {
+  if (!position) {
+    statusBar.style.left = '';
+    statusBar.style.top = '';
+    statusBar.style.bottom = '';
+    statusBar.style.transform = '';
+    return;
+  }
+
+  const next = clampStatusBarPosition(position);
+  statusBar.style.left = next.x + 'px';
+  statusBar.style.top = next.y + 'px';
+  statusBar.style.bottom = 'auto';
+  statusBar.style.transform = 'translate(-50%, -50%)';
+  naviConfig.statusBarPosition = next;
+}
+
+async function saveStatusBarState() {
+  await window.navi.saveConfig(naviConfig);
+}
+
+function applyStatusBarVisibility(visible) {
+  naviConfig.statusBarVisible = visible;
+  statusBar.classList.toggle('hidden', !visible);
+  if (!visible) {
+    isHoveringControls = false;
+    isDraggingStatusBar = false;
+    statusBar.classList.remove('dragging');
+  }
+  syncOverlayInteractivity();
 }
 
 function toggleSettings() {
@@ -639,6 +688,10 @@ settingsBtn.addEventListener('click', e => {
 });
 
 window.navi.onHotkeySettings(() => toggleSettings());
+window.navi.onHotkeyToggleStatusBar(async () => {
+  applyStatusBarVisibility(!naviConfig.statusBarVisible);
+  await saveStatusBarState();
+});
 
 btnLocal.addEventListener('click',  () => applyTTSToggle('local'));
 btnEleven.addEventListener('click', () => applyTTSToggle('elevenlabs'));
@@ -658,6 +711,39 @@ saveBtn.addEventListener('click', async e => {
 });
 
 quitBtn.addEventListener('click', () => window.navi.quitApp());
+
+statusBar.addEventListener('pointerdown', e => {
+  if (e.target.closest('button')) return;
+
+  const rect = statusBar.getBoundingClientRect();
+  isDraggingStatusBar = true;
+  statusBarDragOffset = {
+    x: e.clientX - (rect.left + rect.width / 2),
+    y: e.clientY - (rect.top + rect.height / 2),
+  };
+  statusBar.classList.add('dragging');
+  statusBar.setPointerCapture?.(e.pointerId);
+  syncOverlayInteractivity();
+  e.preventDefault();
+  e.stopPropagation();
+});
+
+document.addEventListener('pointermove', e => {
+  if (!isDraggingStatusBar) return;
+  applyStatusBarPosition({
+    x: e.clientX - statusBarDragOffset.x,
+    y: e.clientY - statusBarDragOffset.y,
+  });
+});
+
+document.addEventListener('pointerup', async e => {
+  if (!isDraggingStatusBar) return;
+  isDraggingStatusBar = false;
+  statusBar.classList.remove('dragging');
+  statusBar.releasePointerCapture?.(e.pointerId);
+  syncOverlayInteractivity();
+  await saveStatusBarState();
+});
 
 // Esc also closes settings
 window.navi.onHotkeyDismiss(() => {
@@ -901,6 +987,9 @@ window.navi.onTranscriberStatus(status => {
 async function init() {
   // Load saved config
   naviConfig = await window.navi.getConfig();
+  naviConfig.statusBarVisible = naviConfig.statusBarVisible !== false;
+  applyStatusBarPosition(naviConfig.statusBarPosition);
+  applyStatusBarVisibility(naviConfig.statusBarVisible);
   applyTTSToggle(naviConfig.tts);
   if (naviConfig.elevenLabsKey)     elKey.value   = naviConfig.elevenLabsKey;
   if (naviConfig.elevenLabsVoiceId) elVoice.value = naviConfig.elevenLabsVoiceId;

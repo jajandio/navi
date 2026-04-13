@@ -11,9 +11,18 @@ const VISION_MODEL = 'gemma4';
 function configPath() {
   return path.join(app.getPath('userData'), 'navi-config.json');
 }
+function defaultConfig() {
+  return {
+    tts: 'local',
+    elevenLabsKey: '',
+    elevenLabsVoiceId: 'fS4RM86GDhM251CjumZM',
+    statusBarPosition: null,
+    statusBarVisible: true,
+  };
+}
 function loadConfig() {
-  try { return JSON.parse(fs.readFileSync(configPath(), 'utf8')); }
-  catch { return { tts: 'local', elevenLabsKey: '', elevenLabsVoiceId: 'fS4RM86GDhM251CjumZM' }; }
+  try { return { ...defaultConfig(), ...JSON.parse(fs.readFileSync(configPath(), 'utf8')) }; }
+  catch { return defaultConfig(); }
 }
 function saveConfig(cfg) {
   fs.writeFileSync(configPath(), JSON.stringify(cfg, null, 2));
@@ -116,6 +125,9 @@ function registerHotkeys() {
   });
   globalShortcut.register('CommandOrControl+N', () => {
     overlayWin.webContents.send('hotkey-settings');
+  });
+  globalShortcut.register('CommandOrControl+H', () => {
+    overlayWin.webContents.send('hotkey-toggle-status-bar');
   });
   globalShortcut.register('CommandOrControl+Q', () => {
     app.quit();

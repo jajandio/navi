@@ -14,5 +14,6 @@ contextBridge.exposeInMainWorld('navi', {
   onHotkeyToggle:   (cb) => ipcRenderer.on('hotkey-toggle',        () => cb()),
   onHotkeyDismiss:  (cb) => ipcRenderer.on('hotkey-dismiss',       () => cb()),
   onHotkeySettings: (cb) => ipcRenderer.on('hotkey-settings',      () => cb()),
+  onHotkeyToggleStatusBar: (cb) => ipcRenderer.on('hotkey-toggle-status-bar', () => cb()),
   onTranscriberStatus: (cb) => ipcRenderer.on('transcriber-status', (_, s) => cb(s)),
 });
